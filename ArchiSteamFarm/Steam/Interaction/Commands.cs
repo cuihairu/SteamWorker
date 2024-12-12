@@ -323,6 +323,8 @@ public sealed class Commands {
 						return await ResponseTradingBlacklistRemove(access, args[1], Utilities.GetArgsAsText(args, 2, ","), steamID).ConfigureAwait(false);
 					case "TBRM":
 						return ResponseTradingBlacklistRemove(access, args[1]);
+					case "INVENTORY" when args.Length > 3:
+						return await ResponseInventory(access, args[1], args[2], args[3]);
 					case "TRANSFER" when args.Length > 2:
 						return await ResponseTransfer(access, args[1], Utilities.GetArgsAsText(message, 2), steamID).ConfigureAwait(false);
 					case "TRANSFER":
@@ -3293,7 +3295,7 @@ public sealed class Commands {
 		return FormatBotResponse(success ? message : Strings.FormatWarningFailedWithError(message));
 	}
 
-	private static async Task<string?> ResponseInventory(EAccess access, string botName,bool trading，ulong steamID = 0) {
+	private static async Task<string?> ResponseInventory(EAccess access, string botName, string appIDText, string contextIDText, bool trading = false) {
 		if (!Enum.IsDefined(access)) {
 			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
 		}
@@ -3304,7 +3306,17 @@ public sealed class Commands {
 		if (bot == null) {
 			return access >= EAccess.Owner ? FormatStaticResponse(Strings.FormatBotNotFound(botName)) : null;
 		}
-		bot
+		if (!uint.TryParse(appIDText, out uint appID) || (appID == 0)) {
+			return FormatBotResponse(Strings.FormatErrorIsInvalid(nameof(appID)), botName);
+		}
+		if (!uint.TryParse(contextIDText, out uint contextID) || (contextID == 0)) {
+			return FormatBotResponse(Strings.FormatErrorIsInvalid(nameof(contextID)),botName);
+		}
+		(bool success, string message, HashSet<Asset>? inventory) = await bot.Actions.GetMyInventoryAsync(appID,contextID,null,trading).ConfigureAwait(false);
+		if (!success || inventory == null) {
+			return message;	
+		}	
+		return string.Join("\n", inventory.Select(item => System.Text.Json.JsonSerializer.Serialize(item)));
 	}
 	private static async Task<string?> ResponseTransfer(EAccess access, string botNames, string botNameTo, ulong steamID = 0) {
 		if (!Enum.IsDefined(access)) {

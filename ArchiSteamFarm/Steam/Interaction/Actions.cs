@@ -434,9 +434,10 @@ public sealed class Actions : IAsyncDisposable, IDisposable {
 	}
 
 	[PublicAPI]
-	public async Task<(bool Success, string Message, HashSet<Asset>? Inventory)> GetMyInventoryAsync(uint appID, ulong contextID, Func<Asset, bool> filterFunction) {
+	public async Task<(bool Success, string Message, HashSet<Asset>? Inventory)> GetMyInventoryAsync(uint appID, ulong contextID, Func<Asset, bool>? filterFunction, bool tradableOnly = false, bool marketableOnly = false, ushort itemsCountPerRequest = ArchiWebHandler.MaxItemsInSingleInventoryRequest) {
 		try {
-			HashSet<Asset> inventory = await Bot.ArchiHandler.GetMyInventoryAsync(appID, contextID, true)
+			filterFunction ??= static _ => true;
+			HashSet<Asset> inventory = await Bot.ArchiHandler.GetMyInventoryAsync(appID, contextID, tradableOnly, marketableOnly, itemsCountPerRequest)
 				.Where(item => filterFunction(item))
 				.ToHashSetAsync()
 				.ConfigureAwait(false);
