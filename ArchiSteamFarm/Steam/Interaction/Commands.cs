@@ -29,6 +29,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AngleSharp.Dom;
 using ArchiSteamFarm.Core;
 using ArchiSteamFarm.Helpers;
 using ArchiSteamFarm.Localization;
@@ -324,7 +325,7 @@ public sealed class Commands {
 					case "TBRM":
 						return ResponseTradingBlacklistRemove(access, args[1]);
 					case "INVENTORY" when args.Length > 3:
-						return await ResponseInventory(access, args[1], args[2], args[3]);
+						return await ResponseInventory(access, args[1], args[2], args[3]).ConfigureAwait(false);
 					case "TRANSFER" when args.Length > 2:
 						return await ResponseTransfer(access, args[1], Utilities.GetArgsAsText(message, 2), steamID).ConfigureAwait(false);
 					case "TRANSFER":
@@ -3257,6 +3258,46 @@ public sealed class Commands {
 		return responses.Count > 0 ? string.Join(Environment.NewLine, responses) : null;
 	}
 
+	private static (ulong? Partner, string? Token) ExtractTradeOfferDetails(string tradeLink) {
+		if (string.IsNullOrEmpty(tradeLink)) {
+			throw new ArgumentException("Trade link cannot be null or empty.", nameof(tradeLink));
+		}
+
+		const string pattern = @"^https://steamcommunity\.com/tradeoffer/new/\?partner=(\d+)&token=([a-zA-Z0-9]+)$";
+		var match = System.Text.RegularExpressions.Regex.Match(tradeLink, pattern);
+
+		if (!match.Success) {
+			return (null, null);
+		}
+
+		if (!ulong.TryParse(match.Groups[1].Value, out ulong partner)) {
+			return (null, null);
+		}
+		string token = match.Groups[2].Value;
+
+		return (partner, token);
+	}
+
+	private async Task<string?> ResponseTransferBySteamID(EAccess access, ulong targetSteamID, string tradeToken, uint appID,ulong contextID,string customMessage) {
+		if (!Enum.IsDefined(access)) {
+			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
+		}
+
+		if (access < EAccess.Master) {
+			return null;
+		}
+		if (!Bot.IsConnectedAndLoggedOn) {
+			return FormatBotResponse(Strings.BotNotConnected);
+		}
+
+		if (Bot.BotConfig.TransferableTypes.Count == 0) {
+			return FormatBotResponse(Strings.FormatErrorIsEmpty(nameof(Bot.BotConfig.TransferableTypes)));
+		}
+
+		(bool success, string message) = await Bot.Actions.SendInventory(appID: appID,targetSteamID: targetSteamID, contextID: contextID, tradeToken: tradeToken, customMessage: customMessage, filterFunction: item => Bot.BotConfig.TransferableTypes.Contains(item.Type)).ConfigureAwait(false);
+
+		return FormatBotResponse(success ? message : Strings.FormatWarningFailedWithError(message));
+	}
 	private async Task<string?> ResponseTransfer(EAccess access, string botNameTo) {
 		if (!Enum.IsDefined(access)) {
 			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
@@ -3317,6 +3358,30 @@ public sealed class Commands {
 			return message;	
 		}	
 		return string.Join("\n", inventory.Select(item => System.Text.Json.JsonSerializer.Serialize(item)));
+	}
+
+	private static async Task<string?> ResponseTransferByTradeLink(EAccess access, string botName, string tradeLink,uint appID, ulong contextID, string customMessage) {
+		if (!Enum.IsDefined(access)) {
+			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
+		}
+
+		ArgumentException.ThrowIfNullOrEmpty(botName);
+		ArgumentException.ThrowIfNullOrEmpty(tradeLink);
+		Bot? bot = Bot.GetBot(botName);
+
+		if (bot == null) {
+			return access >= EAccess.Owner ? FormatStaticResponse(Strings.FormatBotNotFound(botName)) : null;
+		}
+
+		(ulong? partner, string? token) = ExtractTradeOfferDetails(tradeLink);
+
+		if (partner == null || token == null) {
+			// TODO
+			return FormatStaticResponse(Strings.BotNotConnected);
+		}
+		ulong targetSteamID = 76561197960265728 + (ulong) partner;
+
+		return await bot.Commands.ResponseTransferBySteamID(GetProxyAccess(bot, access, targetSteamID), targetSteamID, token, appID, contextID, customMessage).ConfigureAwait(false);
 	}
 	private static async Task<string?> ResponseTransfer(EAccess access, string botNames, string botNameTo, ulong steamID = 0) {
 		if (!Enum.IsDefined(access)) {
