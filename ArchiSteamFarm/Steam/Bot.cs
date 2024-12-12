@@ -60,6 +60,7 @@ using Microsoft.IdentityModel.JsonWebTokens;
 using SteamKit2;
 using SteamKit2.Authentication;
 using SteamKit2.Internal;
+using static SteamKit2.DepotManifest;
 
 namespace ArchiSteamFarm.Steam;
 
@@ -1789,6 +1790,37 @@ public sealed class Bot : IAsyncDisposable, IDisposable {
 		bot.InitStart();
 	}
 
+	internal static async Task<bool> RegisterBotWithJson(string json) {
+		BotConfig? botConfig = null;
+		try {
+			if (string.IsNullOrEmpty(json)) {
+				ASF.ArchiLogger.LogGenericError(Strings.FormatErrorIsEmpty(nameof(json)));
+
+				return false;
+			}
+
+			botConfig = json.ToJsonObject<BotConfig>();
+		} catch (Exception e) {
+			ASF.ArchiLogger.LogGenericException(e);
+			return false;
+		}
+		//if (!botConfig.CheckValidation()) {
+
+		//}
+		if (string.IsNullOrEmpty(botConfig.SteamLogin) || string.IsNullOrEmpty(botConfig.SteamPassword)) {
+			return false;
+		}
+		string latestJson = botConfig.ToJsonText(true);
+		string configFilePath = GetFilePath(botConfig.SteamLogin, EFileType.Config);
+
+		if (!string.IsNullOrEmpty(configFilePath)) {
+			ASF.ArchiLogger.LogNullError(configFilePath);
+			return true;
+		}
+		await SerializableFile.Write(configFilePath, latestJson).ConfigureAwait(false);
+		await RegisterBot(botConfig.SteamLogin);
+		return true;
+	}
 	internal (bool Success, string? Message) RemoveAuthenticator() {
 		MobileAuthenticator? authenticator = BotDatabase.MobileAuthenticator;
 

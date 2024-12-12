@@ -123,7 +123,7 @@ public static class ASF {
 			return false;
 		}
 
-		await UpdateAndRestart().ConfigureAwait(false);
+		//await UpdateAndRestart().ConfigureAwait(false);
 
 		if (!Program.IgnoreUnsupportedEnvironment && !await ProtectAgainstCrashes().ConfigureAwait(false)) {
 			ArchiLogger.LogFatalError(Strings.ErrorTooManyCrashes);

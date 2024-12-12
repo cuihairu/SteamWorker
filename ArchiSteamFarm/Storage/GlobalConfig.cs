@@ -127,7 +127,7 @@ public sealed class GlobalConfig {
 	public const EUpdateChannel DefaultUpdateChannel = EUpdateChannel.Stable;
 
 	[PublicAPI]
-	public const byte DefaultUpdatePeriod = 24;
+	public const byte DefaultUpdatePeriod = 0;
 
 	[PublicAPI]
 	public const ushort DefaultWebLimiterDelay = 300;

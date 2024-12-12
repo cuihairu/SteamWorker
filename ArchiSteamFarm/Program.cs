@@ -52,7 +52,7 @@ namespace ArchiSteamFarm;
 internal static class Program {
 	internal static bool AllowCrashFileRemoval { get; set; }
 	internal static bool ConfigMigrate { get; private set; } = true;
-	internal static bool ConfigWatch { get; private set; } = true;
+	internal static bool ConfigWatch { get; private set; } = false;
 	internal static bool IgnoreUnsupportedEnvironment { get; private set; }
 	internal static string? NetworkGroup { get; private set; }
 	internal static bool RestartAllowed { get; private set; } = true;
