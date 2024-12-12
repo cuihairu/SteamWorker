@@ -3293,6 +3293,19 @@ public sealed class Commands {
 		return FormatBotResponse(success ? message : Strings.FormatWarningFailedWithError(message));
 	}
 
+	private static async Task<string?> ResponseInventory(EAccess access, string botName,bool trading，ulong steamID = 0) {
+		if (!Enum.IsDefined(access)) {
+			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
+		}
+
+		ArgumentException.ThrowIfNullOrEmpty(botName);
+		Bot? bot = Bot.GetBot(botName);
+
+		if (bot == null) {
+			return access >= EAccess.Owner ? FormatStaticResponse(Strings.FormatBotNotFound(botName)) : null;
+		}
+		bot
+	}
 	private static async Task<string?> ResponseTransfer(EAccess access, string botNames, string botNameTo, ulong steamID = 0) {
 		if (!Enum.IsDefined(access)) {
 			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));

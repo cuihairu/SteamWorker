@@ -36,6 +36,7 @@ using ArchiSteamFarm.Plugins;
 using ArchiSteamFarm.Plugins.Interfaces;
 using ArchiSteamFarm.Steam.Data;
 using ArchiSteamFarm.Steam.Exchange;
+using ArchiSteamFarm.Steam.Integration;
 using ArchiSteamFarm.Steam.Storage;
 using ArchiSteamFarm.Storage;
 using ArchiSteamFarm.Web;
@@ -430,6 +431,24 @@ public sealed class Actions : IAsyncDisposable, IDisposable {
 		}
 
 		return success ? (true, Strings.BotLootingSuccess) : (false, Strings.BotLootingFailed);
+	}
+
+	[PublicAPI]
+	public async Task<(bool Success, string Message, HashSet<Asset>? Inventory)> GetMyInventoryAsync(uint appID, ulong contextID, Func<Asset, bool> filterFunction) {
+		try {
+			HashSet<Asset> inventory = await Bot.ArchiHandler.GetMyInventoryAsync(appID, contextID, true)
+				.Where(item => filterFunction(item))
+				.ToHashSetAsync()
+				.ConfigureAwait(false);
+
+			return (true, string.Empty, inventory);
+		} catch (TimeoutException e) {
+			Bot.ArchiLogger.LogGenericWarningException(e);
+			return (false, Strings.FormatWarningFailedWithError(e.Message), null);
+		} catch (Exception e) {
+			Bot.ArchiLogger.LogGenericException(e);
+			return (false, Strings.FormatWarningFailedWithError(e.Message), null);
+		}
 	}
 
 	[PublicAPI]
