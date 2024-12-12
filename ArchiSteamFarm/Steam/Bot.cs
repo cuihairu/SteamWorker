@@ -2356,6 +2356,22 @@ public sealed class Bot : IAsyncDisposable, IDisposable {
 		}
 	}
 
+	private bool ImportAuthenticatorFromJsonString(string json) {
+		if (string.IsNullOrEmpty(json)) {
+			ArchiLogger.LogGenericError(Strings.FormatErrorIsEmpty(nameof(json)));
+
+			return false;
+		}
+
+		MobileAuthenticator? authenticator = json.ToJsonObject<MobileAuthenticator>();
+
+		if (authenticator == null) {
+			ArchiLogger.LogNullError(authenticator);
+			return false;
+		}
+		return !TryImportAuthenticator(authenticator);
+	}
+
 	private async Task ImportAuthenticatorFromFile(string maFilePath) {
 		if (HasMobileAuthenticator || !File.Exists(maFilePath)) {
 			return;
@@ -2365,25 +2381,9 @@ public sealed class Bot : IAsyncDisposable, IDisposable {
 
 		try {
 			string json = await File.ReadAllTextAsync(maFilePath).ConfigureAwait(false);
-
-			if (string.IsNullOrEmpty(json)) {
-				ArchiLogger.LogGenericError(Strings.FormatErrorIsEmpty(nameof(json)));
-
+			if (!ImportAuthenticatorFromJsonString(json)) {
 				return;
 			}
-
-			MobileAuthenticator? authenticator = json.ToJsonObject<MobileAuthenticator>();
-
-			if (authenticator == null) {
-				ArchiLogger.LogNullError(authenticator);
-
-				return;
-			}
-
-			if (!TryImportAuthenticator(authenticator)) {
-				return;
-			}
-
 			File.Delete(maFilePath);
 		} catch (Exception e) {
 			ArchiLogger.LogGenericException(e);
