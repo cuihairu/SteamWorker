@@ -102,6 +102,7 @@ public sealed class InventoryDescription {
 	}
 
 #pragma warning disable CA1056 // This property is not guaranteed to have parsable Uri
+	// https://community.cloudflare.steamstatic.com/economy/image/{icon_hash}/{size}?allow_animated=1
 	[JsonInclude]
 	[JsonPropertyName("icon_url")]
 	public string IconURL {
