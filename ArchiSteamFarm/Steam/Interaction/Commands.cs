@@ -119,6 +119,8 @@ public sealed class Commands {
 				throw new InvalidOperationException(nameof(args.Length));
 			case 1:
 				switch (args[0].ToUpperInvariant()) {
+					case "CHECKPWD":
+						return await ResponseCheckPassword(access).ConfigureAwait(false);
 					case "2FA":
 						return await Response2FA(access).ConfigureAwait(false);
 					case "2FANO":
@@ -548,6 +550,21 @@ public sealed class Commands {
 		}
 
 		return assetRarities;
+	}
+
+
+	private async Task<string?> ResponseCheckPassword(EAccess access) {
+		if (!Enum.IsDefined(access)) {
+			throw new InvalidEnumArgumentException(nameof(access), (int) access, typeof(EAccess));
+		}
+
+		if (access < EAccess.Master) {
+			return null;
+		}
+
+		(bool success, string? token, string message) = await Bot.Actions.GenerateTwoFactorAuthenticationToken().ConfigureAwait(false);
+
+		return FormatBotResponse(success && !string.IsNullOrEmpty(token) ? Strings.FormatBotAuthenticatorToken(token) : Strings.FormatWarningFailedWithError(message));
 	}
 
 	private async Task<string?> Response2FA(EAccess access) {
